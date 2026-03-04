@@ -324,7 +324,7 @@
       for (const b of boards) counts[b.stockLength] = (counts[b.stockLength] ?? 0) + 1
       const parts = Object.entries(counts)
         .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([len, n]) => `${n}× ${len}ft`)
+        .map(([len, n]) => `${n}× ${len}`)
       document.getElementById('result-summary').textContent =
         `Buy ${boards.length} board${boards.length !== 1 ? 's' : ''}: ${parts.join(', ')}`
 
@@ -340,7 +340,7 @@
         const label = document.createElement('div')
         label.className = 'board-label'
         const wasteStr = waste > 1e-9 ? ` — ${fmt(waste)} waste` : ' — no waste'
-        label.textContent = `Board ${i + 1}: ${stockLength}ft${wasteStr}`
+        label.textContent = `Board ${i + 1}: ${stockLength}${wasteStr}`
         row.appendChild(label)
 
         const bar = document.createElement('div')
