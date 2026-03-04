@@ -328,7 +328,10 @@
       document.getElementById('result-summary').textContent =
         `Buy ${boards.length} board${boards.length !== 1 ? 's' : ''}: ${parts.join(', ')}`
 
-      const sorted = [...boards].sort((a, b) => a.waste - b.waste)
+      const sorted = [...boards].sort((a, b) =>
+        b.stockLength - a.stockLength || a.waste - b.waste
+      )
+      const maxStockLength = Math.max(...sorted.map(b => b.stockLength))
       const list = document.getElementById('board-list')
       list.innerHTML = ''
 
@@ -345,6 +348,7 @@
 
         const bar = document.createElement('div')
         bar.className = 'cut-bar'
+        bar.style.width = `${(stockLength / maxStockLength) * 100}%`
 
         for (const cut of cuts) {
           const seg = document.createElement('div')
