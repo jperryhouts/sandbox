@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ffd, generatePatterns, optimize } from '../apps/lumber/solver.js'
+import { ffd, generatePatterns, optimize } from './solver.js'
 
 describe('ffd', () => {
   it('packs a single piece into one board', () => {
