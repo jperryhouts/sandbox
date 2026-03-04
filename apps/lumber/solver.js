@@ -11,7 +11,7 @@ export function generatePatterns(stockLength, pieces, demands) {
   if (pieces.length === 0) return [[]]
   const maxCounts = pieces.map((p, i) =>
     Math.min(
-      demands ? demands[i] : Infinity,
+      demands ? demands[i] : Math.floor((stockLength + 1e-9) / p),
       p > 1e-9 ? Math.floor((stockLength + 1e-9) / p) : 0
     )
   )
@@ -23,6 +23,7 @@ export function generatePatterns(stockLength, pieces, demands) {
       results.push([...current])
       return
     }
+    // +1e-9 tolerates floating-point underflow in accumulated subtraction
     const maxHere = Math.min(maxCounts[idx], Math.floor(remaining / pieces[idx] + 1e-9))
     for (let c = 0; c <= maxHere; c++) {
       current.push(c)
@@ -110,7 +111,7 @@ export function ffd(stockLengths, pieces) {
         }
       }
 
-      if (bestStock === undefined) throw new Error(`No stock length fits piece ${piece}`)
+      if (bestStock === null) throw new Error(`No stock length fits piece ${piece}`)
       boards.push({ stockLength: bestStock, cuts: [piece], remaining: bestStock - piece })
     }
   }

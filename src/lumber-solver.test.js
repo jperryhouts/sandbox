@@ -75,4 +75,24 @@ describe('generatePatterns', () => {
     expect(patterns).toContainEqual([2, 0])
     expect(patterns).toContainEqual([1, 1])
   })
+
+  it('always includes the all-zeros pattern for multi-piece input', () => {
+    const patterns = generatePatterns(10, [5, 3])
+    expect(patterns).toContainEqual([0, 0])
+  })
+
+  it('handles floating-point piece lengths', () => {
+    const patterns = generatePatterns(10, [3.5])
+    // can fit 2× 3.5 = 7 ≤ 10, but not 3× 10.5 > 10
+    expect(patterns).toContainEqual([2])
+    for (const p of patterns) {
+      expect(p[0] * 3.5).toBeLessThanOrEqual(10 + 1e-9)
+    }
+  })
+
+  it('does not include over-limit patterns in multi-piece case', () => {
+    // stock=10, pieces=[5,3]: [1,2] = 5+6 = 11 > 10, must not be present
+    const patterns = generatePatterns(10, [5, 3])
+    expect(patterns).not.toContainEqual([1, 2])
+  })
 })
