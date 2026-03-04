@@ -1,4 +1,41 @@
 /**
+ * Enumerate all ways to cut one board of `stockLength` into pieces from
+ * `pieces`, respecting optional per-piece demand limits.
+ *
+ * @param {number}   stockLength
+ * @param {number[]} pieces       - distinct piece lengths
+ * @param {number[]} [demands]    - max count of each piece (default: floor(stock/piece))
+ * @returns {number[][]}          - array of count vectors, one entry per piece
+ */
+export function generatePatterns(stockLength, pieces, demands) {
+  if (pieces.length === 0) return [[]]
+  const maxCounts = pieces.map((p, i) =>
+    Math.min(
+      demands ? demands[i] : Infinity,
+      p > 1e-9 ? Math.floor((stockLength + 1e-9) / p) : 0
+    )
+  )
+
+  const results = []
+
+  function recurse(idx, remaining, current) {
+    if (idx === pieces.length) {
+      results.push([...current])
+      return
+    }
+    const maxHere = Math.min(maxCounts[idx], Math.floor(remaining / pieces[idx] + 1e-9))
+    for (let c = 0; c <= maxHere; c++) {
+      current.push(c)
+      recurse(idx + 1, remaining - c * pieces[idx], current)
+      current.pop()
+    }
+  }
+
+  recurse(0, stockLength, [])
+  return results
+}
+
+/**
  * Sort pieces descending, then greedily assign each piece to the first
  * open board (across all stock lengths) that still has room.
  * When no existing board fits, open a new board using the stock length

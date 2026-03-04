@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ffd } from '../apps/lumber/solver.js'
+import { ffd, generatePatterns } from '../apps/lumber/solver.js'
 
 describe('ffd', () => {
   it('packs a single piece into one board', () => {
@@ -40,5 +40,39 @@ describe('ffd', () => {
     // Every piece must appear in some board
     const allCuts = result.flatMap(b => b.cuts)
     expect(allCuts.sort((a,b)=>a-b)).toEqual([...pieces].sort((a,b)=>a-b))
+  })
+})
+
+describe('generatePatterns', () => {
+  it('returns empty pattern for no pieces', () => {
+    const patterns = generatePatterns(10, [])
+    expect(patterns).toEqual([[]])
+  })
+
+  it('single piece that fits', () => {
+    const patterns = generatePatterns(10, [7])
+    expect(patterns).toContainEqual([1])
+    expect(patterns).toContainEqual([0])
+  })
+
+  it('does not include patterns where total exceeds stock', () => {
+    const patterns = generatePatterns(10, [7, 6])
+    for (const p of patterns) {
+      const total = p[0] * 7 + p[1] * 6
+      expect(total).toBeLessThanOrEqual(10 + 1e-9)
+    }
+  })
+
+  it('respects demand limits', () => {
+    const patterns = generatePatterns(20, [7], [1])
+    for (const p of patterns) {
+      expect(p[0]).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('returns all valid combinations for stock=10, pieces=[5,3]', () => {
+    const patterns = generatePatterns(10, [5, 3])
+    expect(patterns).toContainEqual([2, 0])
+    expect(patterns).toContainEqual([1, 1])
   })
 })
