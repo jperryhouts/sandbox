@@ -12,7 +12,7 @@ export function switchApp(app) {
 
   frame.src = app.src
 
-  document.querySelectorAll('#tab-list li').forEach(el => {
+  tabList.querySelectorAll('li').forEach(el => {
     el.removeAttribute('aria-current')
   })
 
@@ -20,18 +20,14 @@ export function switchApp(app) {
   if (activeTab) activeTab.setAttribute('aria-current', 'page')
 }
 
-function init() {
-  const tabList = document.getElementById('tab-list')
-
+export function init() {
   apps.forEach(app => {
     const li = document.createElement('li')
     li.textContent = app.label
     li.dataset.id = app.id
     li.addEventListener('click', () => switchApp(app))
-    tabList.appendChild(li)
+    document.getElementById('tab-list').appendChild(li)
   })
 
   if (apps.length > 0) switchApp(apps[0])
 }
-
-init()
