@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sandbox</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <nav id="sidebar">
+    <div id="sidebar-header">Sandbox</div>
+    <ul id="tab-list"></ul>
+  </nav>
+  <main id="main-panel">
+    <iframe id="app-frame" title="App"></iframe>
+  </main>
+  <script type="module">
+    import { init } from '/src/main.js'
+    init()
+  </script>
+</body>
+</html>
