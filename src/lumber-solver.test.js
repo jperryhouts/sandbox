@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ffd, generatePatterns } from '../apps/lumber/solver.js'
+import { ffd, generatePatterns, optimize } from '../apps/lumber/solver.js'
 
 describe('ffd', () => {
   it('packs a single piece into one board', () => {
@@ -94,5 +94,47 @@ describe('generatePatterns', () => {
     // stock=10, pieces=[5,3]: [1,2] = 5+6 = 11 > 10, must not be present
     const patterns = generatePatterns(10, [5, 3])
     expect(patterns).not.toContainEqual([1, 2])
+  })
+})
+
+describe('optimize', () => {
+  it('returns same result as ffd for trivial case', () => {
+    const result = optimize([10], [5, 5])
+    expect(result.boards.length).toBe(1)
+    expect(result.timedOut).toBe(false)
+  })
+
+  it('result never exceeds ffd board count', () => {
+    const pieces = [8, 8, 7, 7, 3.9, 5.9, 8.5, 4, 2]
+    const ffdResult = ffd([10, 16], pieces)
+    const result = optimize([10, 16], pieces)
+    expect(result.boards.length).toBeLessThanOrEqual(ffdResult.length)
+  })
+
+  it('solves the design doc example optimally (4 boards)', () => {
+    const pieces = [8, 8, 7, 7, 3.9, 5.9, 8.5, 4, 2]
+    const result = optimize([10, 16], pieces)
+    expect(result.boards.length).toBe(4)
+  })
+
+  it('returns timedOut=false for small input', () => {
+    const result = optimize([10], [3, 3, 3])
+    expect(result.timedOut).toBe(false)
+  })
+
+  it('each board cut list sums to at most its stock length', () => {
+    const pieces = [8, 8, 7, 7, 3.9, 5.9, 8.5, 4, 2]
+    const result = optimize([10, 16], pieces)
+    for (const board of result.boards) {
+      const total = board.cuts.reduce((s, c) => s + c, 0)
+      expect(total).toBeLessThanOrEqual(board.stockLength + 1e-9)
+    }
+  })
+
+  it('every required piece appears in the result', () => {
+    const pieces = [8, 8, 7, 7, 3.9, 5.9, 8.5, 4, 2]
+    const result = optimize([10, 16], pieces)
+    const allCuts = result.boards.flatMap(b => b.cuts).sort((a, b) => a - b)
+    expect(allCuts).toEqual([...pieces].sort((a, b) => a - b))
   })
 })

@@ -122,3 +122,83 @@ export function ffd(stockLengths, pieces) {
     waste: b.remaining,
   }))
 }
+
+/**
+ * Find the minimum number of boards needed using branch-and-bound.
+ * Falls back to FFD if the search exceeds `timeoutMs`.
+ *
+ * @param {number[]} stockLengths
+ * @param {number[]} pieces         - required cut lengths (may repeat)
+ * @param {number}   [timeoutMs=2000]
+ * @returns {{ boards: {stockLength,cuts,waste}[], timedOut: boolean }}
+ */
+export function optimize(stockLengths, pieces, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs
+
+  // Deduplicate piece lengths and track demands
+  const pieceMap = new Map()
+  for (const p of pieces) pieceMap.set(p, (pieceMap.get(p) ?? 0) + 1)
+  const uniquePieces = [...pieceMap.keys()].sort((a, b) => b - a)
+  const initialDemand = uniquePieces.map(p => pieceMap.get(p))
+
+  // Pre-generate all patterns per stock length (non-trivial only)
+  const allPatterns = stockLengths.map(s => ({
+    stockLength: s,
+    patterns: generatePatterns(s, uniquePieces, initialDemand)
+      .filter(p => p.some(c => c > 0)),
+  }))
+
+  function applyPattern(demand, pattern) {
+    return demand.map((d, i) => d - pattern[i])
+  }
+
+  function demandFulfilled(demand) {
+    return demand.every(d => d <= 0)
+  }
+
+  // FFD lower bound: how many boards does FFD need for remaining pieces?
+  function lowerBound(demand) {
+    const remaining = []
+    for (let i = 0; i < uniquePieces.length; i++) {
+      for (let j = 0; j < demand[i]; j++) remaining.push(uniquePieces[i])
+    }
+    if (remaining.length === 0) return 0
+    return ffd(stockLengths, remaining).length
+  }
+
+  // Initial upper bound: FFD solution
+  let bestBoards = ffd(stockLengths, pieces)
+  let timedOut = false
+
+  function branch(demand, assignedBoards) {
+    if (Date.now() > deadline) { timedOut = true; return }
+    if (demandFulfilled(demand)) {
+      if (assignedBoards.length < bestBoards.length) {
+        bestBoards = assignedBoards.map(({ stockLength, pattern }) => {
+          const cuts = []
+          for (let i = 0; i < uniquePieces.length; i++) {
+            for (let j = 0; j < pattern[i]; j++) cuts.push(uniquePieces[i])
+          }
+          const waste = stockLength - cuts.reduce((s, c) => s + c, 0)
+          return { stockLength, cuts, waste }
+        })
+      }
+      return
+    }
+
+    // Prune if we can't beat the best known solution
+    if (assignedBoards.length + lowerBound(demand) >= bestBoards.length) return
+
+    for (const { stockLength, patterns } of allPatterns) {
+      for (const pattern of patterns) {
+        if (pattern.some((c, i) => c > demand[i])) continue
+        const newDemand = applyPattern(demand, pattern)
+        branch(newDemand, [...assignedBoards, { stockLength, pattern }])
+        if (timedOut) return
+      }
+    }
+  }
+
+  branch(initialDemand, [])
+  return { boards: bestBoards, timedOut }
+}
