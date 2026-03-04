@@ -125,6 +125,8 @@ export function ffd(stockLengths, pieces) {
 
 /**
  * Find the minimum number of boards needed using branch-and-bound.
+ * Among solutions with equal board count, prefers minimum total stock purchased,
+ * then maximum single scrap piece (to consolidate waste into useful offcuts).
  * Falls back to FFD if the search exceeds `timeoutMs`.
  *
  * @param {number[]} stockLengths
@@ -166,14 +168,44 @@ export function optimize(stockLengths, pieces, timeoutMs = 2000) {
     return ffd(stockLengths, remaining).length
   }
 
+  // Compute total stock and max scrap for boards in {stockLength, pattern} form
+  function assignedTotalStock(boards) {
+    return boards.reduce((s, b) => s + b.stockLength, 0)
+  }
+
+  function assignedMaxScrap(boards) {
+    if (boards.length === 0) return 0
+    return Math.max(...boards.map(({ stockLength, pattern }) =>
+      stockLength - pattern.reduce((s, c, i) => s + c * uniquePieces[i], 0)
+    ))
+  }
+
   // Initial upper bound: FFD solution
   let bestBoards = ffd(stockLengths, pieces)
+  let bestTotalStock = bestBoards.reduce((s, b) => s + b.stockLength, 0)
+  let bestMaxScrap = Math.max(0, ...bestBoards.map(b => b.waste))
   let timedOut = false
+
+  // Returns true if the candidate (count, totalStock, maxScrap) beats the current best.
+  // Objectives in priority order:
+  //   1. Fewer boards
+  //   2. Less total stock purchased (proxy for cost)
+  //   3. Larger single scrap piece (more useful offcut)
+  function isBetter(count, totalStock, maxScrap) {
+    if (count < bestBoards.length) return true
+    if (count > bestBoards.length) return false
+    if (totalStock < bestTotalStock - 1e-9) return true
+    if (totalStock > bestTotalStock + 1e-9) return false
+    return maxScrap > bestMaxScrap + 1e-9
+  }
 
   function branch(demand, assignedBoards) {
     if (Date.now() > deadline) { timedOut = true; return }
     if (demandFulfilled(demand)) {
-      if (assignedBoards.length < bestBoards.length) {
+      const count = assignedBoards.length
+      const totalStock = assignedTotalStock(assignedBoards)
+      const maxScrap = assignedMaxScrap(assignedBoards)
+      if (isBetter(count, totalStock, maxScrap)) {
         bestBoards = assignedBoards.map(({ stockLength, pattern }) => {
           const cuts = []
           for (let i = 0; i < uniquePieces.length; i++) {
@@ -182,12 +214,14 @@ export function optimize(stockLengths, pieces, timeoutMs = 2000) {
           const waste = stockLength - cuts.reduce((s, c) => s + c, 0)
           return { stockLength, cuts, waste }
         })
+        bestTotalStock = totalStock
+        bestMaxScrap = maxScrap
       }
       return
     }
 
-    // Prune if we can't beat the best known solution
-    if (assignedBoards.length + lowerBound(demand) >= bestBoards.length) return
+    // Prune only when we strictly cannot match the best board count
+    if (assignedBoards.length + lowerBound(demand) > bestBoards.length) return
 
     for (const { stockLength, patterns } of allPatterns) {
       for (const pattern of patterns) {

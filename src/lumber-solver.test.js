@@ -137,4 +137,15 @@ describe('optimize', () => {
     const allCuts = result.boards.flatMap(b => b.cuts).sort((a, b) => a - b)
     expect(allCuts).toEqual([...pieces].sort((a, b) => a - b))
   })
+
+  it('consolidates waste into the largest possible scrap piece', () => {
+    // Same pieces as the design doc example, different order — same result
+    const pieces = [8, 8, 7, 7, 2, 4, 8.5, 5.9, 3.9]
+    const result = optimize([10, 16], pieces)
+    expect(result.boards.length).toBe(4)
+    // Optimal: 16ft[8+8] + 16ft[7+7+2] + 16ft[8.5+3.9=12.4, waste=3.6] + 10ft[5.9+4=9.9]
+    // Max scrap should be ~3.6ft, not a collection of tiny scraps
+    const maxScrap = Math.max(...result.boards.map(b => b.waste))
+    expect(maxScrap).toBeGreaterThan(3.4)
+  })
 })
